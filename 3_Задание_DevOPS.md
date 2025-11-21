@@ -1,484 +1,864 @@
-# Полноценный диплой облачного решения 
+# DevOps лабораторные работы
 
 ### Суть задачи
-- Вам дается базовый код приложения (frontend, backend, база данных), который необходимо самостоятельно упаковать в Docker-контейнеры, настроить инфраструктуру и автоматизировать процесс развертывания.
 - Один за другим создаем файлы в корне проекта и выполняем настроку конфигурации решения.
 - Идите по документу постепенно, тут много.
 - Нейронка тут не нужна!!!.
+- Также в корне есть с файл с тестом, желательно после всего этого выполнить и отчитать именно его (3_Задание_DevOPS_test).
 
-### Ключевые компоненты
+## Введение
 
-**Приложение:**
-- **Frontend** - статические HTML/JS файлы
-- **Backend** - Node.js/Express API сервер  
-- **Database** - PostgreSQL с тестовыми данными
+Если ты это читаешь, значит ты хочешь попробовать себя в DevOps.
 
-**Инфраструктура:**
-- **Docker** - контейнеризация всех компонентов
-- **Nginx** - reverse proxy и веб-сервер
-- **Docker Compose** - оркестрация контейнеров
+DevOps — это не профессия и не инструмент. Это подход: как сделать так, чтобы код быстро, надёжно и предсказуемо попадал в рабочую среду.
 
-**Автоматизация:**
-- **GitHub Actions** - CI/CD пайплайн
-- **SSH-деплой** - автоматическое развертывание на VPS
-- **Health-check** - проверка работоспособности после деплоя
+Если очень коротко:
+- Разработчики пишут код
+- DevOps помогает этому коду жить в реальном мире
 
-### Основные требования
+Это включает:
+- упаковку приложения
+- автоматизацию сборки
+- развёртывание
+- мониторинг
+- инфраструктуру
+- логирование
+- устранение проблем
 
-1. **Frontend** доступен по `http://SERVER_IP/`
-2. **Backend API** отвечает на:
-   - `GET /api/users` - список пользователей
-   - `GET /api/health` - статус приложения
-3. **PostgreSQL** инициализируется автоматически
-4. **Nginx** проксирует запросы:
-   - `/` → frontend
-   - `/api/` → backend
-5. **Docker Compose** запускает весь стек одной командой
-6. **CI/CD** автоматически деплоит при каждом push в main ветку
+И главное — DevOps учит мыслить системно: «как этот сервис будет работать завтра, под нагрузкой, на сервере, а не на моём ноутбуке?»
 
-### Что нужно сделать
+В этих лабораторных ты проходишь путь от простого контейнера → до автоматизации CI/CD.
 
-1. Создать Dockerfile для каждого сервиса
-2. Настроить docker-compose.yml для оркестрации
-3. Развернуть на VPS с Ubuntu (можем дать)
-4. Настроить автоматический деплой через GitHub Actions
-5. Обеспечить health-check эндпоинты
-6. Протестировать работоспособность
+И сразу будь готов стать линуксоидом, тк нормальные приложения и серваке на windows не делают. Поэтому советую поставить себе на комп виртуалку с ubuntu.
 
-### Результат
-Полностью рабочее приложение, доступное из интернета, с автоматизированным процессом обновления при изменении кода.
+## Основные технологии, которые ты используешь
+
+Объясняю простым языком:
+
+**Docker**
+Это как коробка, в которую можно сложить приложение вместе со всем, что ему нужно. Где угодно запустишь — работает одинаково.
+
+**Docker Compose**
+Когда контейнеров становится несколько (frontend, backend, база, логгер), запускать всё по одному неудобно. Compose — это «пульт управления», который запускает всю систему одной командой.
+
+**Nginx**
+Веб-сервер, который умеет раздавать статику, принимать HTTP-запросы и перенаправлять их дальше. Часто используется как «ворота» системы.
+
+**PostgreSQL**
+Реляционная база данных. Используется когда данные нужно хранить надёжно и структурированно.
+
+**GitHub + Git**
+Система контроля версий + безопасное хранилище проекта. В DevOps git — как воздух. Без git ты не сделаешь ни CI/CD, ни командную разработку.
+
+**GitHub Actions (CI/CD)**
+Это робот, который:
+- видит твой push
+- собирает проект
+- разворачивает его
+- проверяет здоровье
+- сообщает тебе результат
 
 ---
 
-## Техническая реализация
+## ЛАБОРАТОРНАЯ РАБОТА №1 (Windows)
+### Контейнеризация простого веб-приложения в Docker
 
-### 1. Структура файлов проекта
+Подробная методичка, рассчитанная на человека, который никогда не работал с Docker и командной строкой.
 
+#### Где выполнять работу
+Эта лабораторная выполняется на обычном домашнем компьютере под Windows 10/11. Ничего дополнительно устанавливать не нужно, кроме Docker Desktop.
+
+Мы специально делаем первую лабораторную в максимально комфортной среде — Windows. Позже ты перейдёшь к работе на Linux-серверах (это сто процентов будет нужно), но для старта Windows подходит идеально.
+
+#### Что тебе понадобится
+- Windows 10/11
+- Docker Desktop (бесплатно)
+- Командная строка Windows (cmd) или PowerShell
+- Любой браузер (Chrome / Edge)
+
+#### Установка Docker Desktop на Windows
+Без Docker Desktop ты не сможешь запускать контейнеры. Поэтому начать надо именно отсюда.
+
+1. Перейди на официальный сайт Docker: https://www.docker.com/products/docker-desktop/
+
+2. Нажми кнопку: Download for Windows
+
+3. Скачай файл и запусти установку (двойной клик).
+
+4. В установщике:
+   - соглашаешься со всем
+   - оставляешь стандартные настройки
+   - нажимаешь Install
+
+5. После установки — перезагрузи компьютер.
+
+6. Запусти Docker Desktop (значок появится в меню Пуск). После запуска Docker может несколько минут "инициализироваться".
+
+7. Проверка установки:
+   - Открой Командную строку (cmd). Как открыть: нажми Win → напиши cmd → Enter.
+   - Введи: `docker --version`
+   - Если видишь версию вида: `Docker version 24.xx.x, build ...` значит установка прошла успешно.
+   - Если выдаёт ошибку — Docker Desktop ещё не запустился → подожди пару минут.
+
+#### ЛР №1. ЗАДАЧА
+Ты создашь:
+- свою папку проекта
+- HTML-файл
+- Dockerfile
+- Docker-образ
+- запустишь контейнер
+- откроешь страницу в браузере по адресу: http://localhost:8080
+
+После этого твоя страница будет работать внутри Docker-контейнера, как маленький веб-сервис.
+
+#### ШАГ 1 — Создай рабочую папку под проект
+Открой Командную строку (Win → написать: cmd → Enter).
+
+Теперь создай папку:
+```bash
+mkdir C:\lab1
 ```
-cloud-web-app/
-├── frontend/
-│   ├── index.html
-│   ├── app.js
-│   └── Dockerfile
-├── backend/
-│   ├── server.js
-│   ├── package.json
-│   └── Dockerfile
-├── db/
-│   └── init.sql
-├── nginx/
-│   ├── nginx.conf
-│   └── Dockerfile
-├── docker-compose.yml
-└── .github/
-    └── workflows/
-        └── deploy.yml
+
+Зайди в неё:
+```bash
+cd C:\lab1
 ```
 
-### 2. Конфигурационные файлы
+Теперь ты работаешь внутри проекта.
 
-#### 2.1 Frontend
+#### ШАГ 2 — Создай HTML-файл
+В Windows проще всего делать это через Блокнот.
 
-**frontend/index.html**
+1. Открой «Блокнот» (Win → "notepad").
+2. Вставь текст:
 ```html
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cloud Web App</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 40px; }
-        .user { border: 1px solid #ddd; padding: 10px; margin: 5px 0; }
-        .error { color: red; }
-    </style>
+    <title>My First Docker App</title>
 </head>
 <body>
-    <h1>Cloud Web Application</h1>
-    <div id="users"></div>
-    <script src="app.js"></script>
+    <h1>Моё первое приложение в Docker!</h1>
+    <p>Если ты видишь эту страницу — контейнер работает.</p>
 </body>
 </html>
 ```
 
-**frontend/app.js**
-```javascript
-async function loadUsers() {
-    try {
-        const response = await fetch('/api/users');
-        if (!response.ok) throw new Error('Network response was not ok');
-        
-        const users = await response.json();
-        const usersContainer = document.getElementById('users');
-        
-        usersContainer.innerHTML = users.map(user => 
-            `<div class="user">
-                <strong>${user.name}</strong><br>
-                Email: ${user.email}<br>
-                Создан: ${new Date(user.created_at).toLocaleDateString('ru-RU')}
-            </div>`
-        ).join('');
-    } catch (error) {
-        document.getElementById('users').innerHTML = 
-            `<div class="error">Ошибка загрузки пользователей: ${error.message}</div>`;
-    }
-}
+3. Нажми: Файл → Сохранить как…
+4. Путь: C:\lab1
+5. Имя файла: index.html
+6. Тип: Все файлы
+7. Кодировка: UTF-8
+8. Готово.
 
-document.addEventListener('DOMContentLoaded', loadUsers);
-```
+#### ШАГ 3 — Создай Dockerfile
+Dockerfile — это инструкция для Docker.
 
-**frontend/Dockerfile**
+Сделай так же:
+1. Открой Блокнот
+2. Вставь:
 ```dockerfile
 FROM nginx:alpine
-COPY . /usr/share/nginx/html
+COPY index.html /usr/share/nginx/html/index.html
 EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
 ```
 
-#### 2.2 Backend
+3. Сохрани как:
+   - Папка: C:\lab1
+   - Имя файла: Dockerfile
+   - Важно: без расширения .txt
 
-**backend/package.json**
-```json
-{
-  "name": "cloud-web-app-backend",
-  "version": "1.0.0",
-  "description": "Backend for cloud web application",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js",
-    "test": "echo \"No tests specified\" && exit 0"
-  },
-  "dependencies": {
-    "express": "^4.18.2",
-    "pg": "^8.11.3"
-  }
-}
+Пояснение:
+- мы используем nginx как веб-сервер
+- копируем твою страницу внутрь контейнера
+- nginx будет отдавать её по порту 80
+
+#### ШАГ 4 — Собери Docker-образ
+В командной строке:
+```bash
+cd C:\lab1
+docker build -t my-first-app .
 ```
 
-**backend/server.js**
-```javascript
-const express = require('express');
-const { Pool } = require('pg');
-const app = express();
-const port = 3000;
-
-const pool = new Pool({
-    user: 'user',
-    host: 'db',
-    database: 'appdb',
-    password: 'password',
-    port: 5432,
-});
-
-app.get('/api/health', (req, res) => {
-    res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
-});
-
-app.get('/api/users', async (req, res) => {
-    try {
-        const result = await pool.query('SELECT * FROM users ORDER BY id');
-        res.json(result.rows);
-    } catch (err) {
-        console.error('Database error:', err);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
-
-app.listen(port, '0.0.0.0', () => {
-    console.log(`Backend server running on port ${port}`);
-});
+Если всё прошло успешно — увидишь:
+```
+Successfully tagged my-first-app:latest
 ```
 
-**backend/Dockerfile**
+Проверка:
+```bash
+docker images
+```
+
+Ты увидишь свой образ в списке.
+
+#### ШАГ 5 — Запусти контейнер
+Команда:
+```bash
+docker run -p 8080:80 my-first-app
+```
+
+Расшифровка:
+- `-p 8080:80` → порт 8080 твоего компьютера → порт 80 внутри контейнера
+- `my-first-app` → твой образ
+
+Если текст на экране не меняется — это нормально. Контейнер работает.
+
+#### ШАГ 6 — Проверь результат в браузере
+Открой браузер и перейди по адресу:
+```
+http://localhost:8080
+```
+
+Если ты видишь свою страницу — значит лаба готова.
+
+---
+
+## ЛАБОРАТОРНАЯ РАБОТА №2 (Windows)
+### Создание собственного контейнерного образа с HTML-страницей
+
+#### Цель лабораторной
+В этой работе ты:
+- создашь свой собственный Docker-образ, а не просто используешь чужой
+- настроишь nginx так, чтобы он отдавал твою HTML-страницу
+- поймёшь, как контейнер «знает», что запускать внутри себя
+- увидишь, как обновлять образ при изменении файлов
+
+После выполнения работы ты уже начнёшь мыслить как DevOps: приложение → Dockerfile → образ → контейнер → результат в браузере.
+
+#### Что ты будешь делать
+- Создашь папку под проект
+- Создашь свой HTML-файл
+- Напишешь Dockerfile
+- Соберёшь Docker-образ
+- Запустишь контейнер
+- Убедишься, что отображается ИМЕННО твоя страница
+
+#### Что понадобится
+- Windows 10/11
+- Docker Desktop (должен быть установлен из ЛР1)
+- Командная строка (cmd)
+- Блокнот
+
+#### Подготовка
+Убедись, что Docker Desktop запущен.
+
+Проверка:
+- Открой командную строку (Win → cmd → Enter)
+- Введи: `docker --version`
+- Если видишь версию Docker — всё отлично.
+
+#### ШАГ 1 — Создай папку проекта
+Открой командную строку и выполни:
+```bash
+mkdir C:\lab2
+cd C:\lab2
+```
+
+#### ШАГ 2 — Создай HTML-страницу
+По заданию HTML должен содержать:
+- твоё имя
+- статус работы
+- произвольную информацию
+
+Сделаем файл:
+1. Открой Блокнот.
+2. Вставь текст:
+```html
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>DevOps Status Page</title>
+</head>
+<body>
+    <h1>DevOps Status Page</h1>
+
+    <p>Студент: Фамилия Имя</p>
+    <p>Группа: XXX-000</p>
+    <p>Статус: всё работает ✔</p>
+
+    <hr>
+    <p>Это моя персональная HTML-страница, упакованная в Docker!</p>
+</body>
+</html>
+```
+
+3. Сохрани:
+   - Папка: C:\lab2
+   - Имя: index.html
+   - Тип: "Все файлы"
+   - Кодировка: UTF-8
+
+#### ШАГ 3 — Создай Dockerfile
+Теперь ты создаёшь свой образ, а nginx — это просто основа.
+
+1. Открой Блокнот
+2. Вставь:
 ```dockerfile
-FROM node:18-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-EXPOSE 3000
-CMD ["npm", "start"]
-```
-
-#### 2.3 База данных
-
-**db/init.sql**
-```sql
-CREATE TABLE IF NOT EXISTS users (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-INSERT INTO users (name, email) VALUES 
-('Иван Иванов', 'ivan@example.com'),
-('Петр Петров', 'petr@example.com'),
-('Мария Сидорова', 'maria@example.com')
-ON CONFLICT (email) DO NOTHING;
-```
-
-#### 2.4 Nginx
-
-**nginx/nginx.conf**
-```nginx
-events {
-    worker_connections 1024;
-}
-
-http {
-    server {
-        listen 80;
-        server_name _;
-
-        location / {
-            proxy_pass http://frontend:80;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-        }
-
-        location /api/ {
-            proxy_pass http://backend:3000;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-        }
-    }
-}
-```
-
-**nginx/Dockerfile**
-```dockerfile
+# Шаг 1: использовать образ nginx как базу
 FROM nginx:alpine
-COPY nginx.conf /etc/nginx/nginx.conf
+
+# Шаг 2: удалить дефолтную страницу nginx (по желанию)
+RUN rm -rf /usr/share/nginx/html/*
+
+# Шаг 3: скопировать твою HTML-страницу внутрь контейнера
+COPY index.html /usr/share/nginx/html/index.html
+
+# Шаг 4: указать какой порт слушает nginx внутри контейнера
 EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
 ```
 
-#### 2.5 Docker Compose
+3. Сохрани:
+   - Папка: C:\lab2
+   - Имя: Dockerfile
+   - Без расширения .txt
 
-**docker-compose.yml**
+#### ШАГ 4 — Собери контейнерный образ
+В командной строке:
+```bash
+cd C:\lab2
+docker build -t my-status-page .
+```
+
+Если всё хорошо — увидишь:
+```
+Successfully tagged my-status-page:latest
+```
+
+#### ШАГ 5 — Запусти контейнер с твоей страницей
+Команда:
+```bash
+docker run -p 8080:80 my-status-page
+```
+
+Пояснение:
+- `-p 8080:80` → внешний порт 8080 → внутренний 80
+- `my-status-page` → имя твоего образа
+
+Оставь окно открытым — контейнер сейчас работает.
+
+#### ШАГ 6 — Открой страницу в браузере
+Перейди по адресу:
+```
+http://localhost:8080
+```
+
+Ты должен увидеть СВОЮ страницу, а не дефолтную nginx.
+
+Если видишь страницу nginx — значит:
+- не удалил дефолтную страницу
+- неправильно скопировал файл
+- образ не пересобрал
+
+Чтобы проверить — пересобери:
+```bash
+docker build -t my-status-page .
+docker run -p 8080:80 my-status-page
+```
+
+#### Проверка, что это действительно ТВОЯ страница
+Нужно, чтобы:
+- ✔ были твои имя/фамилия
+- ✔ было слово «Статус»
+- ✔ был текст «всё работает»
+- ✔ не было дефолтной страницы nginx
+
+---
+
+## ЛАБОРАТОРНАЯ РАБОТА №3 (Windows)
+### Многоконтейнерное приложение с использованием Docker Compose
+
+#### Цель работы
+В этой лабораторной ты:
+- научишься запускать несколько контейнеров одновременно одной командой
+- соберёшь систему из двух сервисов:
+  - web — твой сайт из ЛР2
+  - logger — сервис, который постоянно пишет сообщения в лог
+- увидишь, как сервисы живут внутри одного «проекта» Docker Compose
+
+Это уже похоже на реальный мини-прод: у тебя не один контейнер, а целый комплект сервисов.
+
+#### Что тебе понадобится
+- Windows 10/11
+- Установленный и запущенный Docker Desktop
+- Выполненная ЛР2 (то есть уже должен быть собран образ my-status-page)
+- Командная строка (cmd)
+- Блокнот
+
+#### Проверка перед началом
+- Запусти Docker Desktop (если не запущен)
+- Открой Командную строку (Win → написать cmd → Enter)
+- Введи: `docker --version` и `docker images`
+- Убедись, что среди образов есть твой образ из ЛР2, например: `my-status-page latest <id> ...`
+- Если его нет — вернись к ЛР2 и собери образ ещё раз
+
+#### Что мы будем делать в ЛР3
+Ты создашь:
+- Папку C:\lab3
+- Файл docker-compose.yml
+- В нём опишешь два сервиса:
+  - web — использует твой контейнер из ЛР2
+  - logger — использует простой образ busybox и крутится в бесконечном цикле
+
+Запуск будет одной командой: `docker compose up`
+
+И всё вместе поднимется: и сайт, и логгер.
+
+#### ШАГ 1 — Создай папку проекта для ЛР3
+Открой Командную строку и выполни:
+```bash
+mkdir C:\lab3
+cd C:\lab3
+```
+
+Теперь вся работа для этой лабораторной будет в папке C:\lab3.
+
+#### ШАГ 2 — Понять, что такое Docker Compose (коротко)
+До этого ты запускал контейнер прямой командой: `docker run ...`
+
+Это удобно, пока у тебя 1–2 контейнера. Но когда сервисов становится много (web, logger, db, cache, queue и т.д.), такая схема ломается.
+
+Docker Compose позволяет:
+- описать все сервисы в одном файле docker-compose.yml
+- запускать и останавливать всё одной командой
+- держать логи и настройки в одном месте
+
+Мы сделаем именно это.
+
+#### ШАГ 3 — Создай файл docker-compose.yml
+Будем писать его в Блокноте.
+
+1. Открой «Блокнот» (Win → напечатать notepad → Enter)
+2. Вставь в Блокнот вот этот текст:
 ```yaml
-version: '3.8'
+version: "3.9"
 
 services:
-  nginx:
-    build: ./nginx
+  web:
+    image: my-status-page
     ports:
-      - "80:80"
-    depends_on:
-      - frontend
-      - backend
-    networks:
-      - app-network
+      - "8080:80"
 
-  frontend:
-    build: ./frontend
-    networks:
-      - app-network
-
-  backend:
-    build: ./backend
-    environment:
-      - DATABASE_URL=postgresql://user:password@db:5432/appdb
-    depends_on:
-      - db
-    networks:
-      - app-network
-
-  db:
-    image: postgres:15
-    environment:
-      - POSTGRES_DB=appdb
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=password
-    volumes:
-      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - app-network
-
-networks:
-  app-network:
-    driver: bridge
-
-volumes:
-  postgres_data:
+  logger:
+    image: busybox
+    command: sh -c "while true; do echo 'Logger: service is running'; sleep 5; done"
 ```
 
-### 3. Настройка VPS
+3. Сохранение:
+   - Файл → Сохранить как…
+   - Папка: C:\lab3
+   - Имя файла: docker-compose.yml
+   - Тип: «Все файлы»
+   - Кодировка: UTF-8 (если есть выбор)
 
-#### 3.1 Подготовка сервера
+Что здесь написано по-человечески:
+- **web** — это сервис, который:
+  - использует образ my-status-page (твой образ из ЛР2)
+  - пробрасывает порт 8080 твоего компьютера на порт 80 контейнера
 
+- **logger** — это сервис, который:
+  - запускает образ busybox (очень маленький Linux)
+  - внутри выполняет команду:
+    ```bash
+    while true; do
+      echo "Logger: service is running"
+      sleep 5
+    done
+    ```
+    То есть каждые 5 секунд пишет в лог одну и ту же строку
+
+#### ШАГ 4 — Запусти многоконтейнерное приложение
+В Командной строке, в папке C:\lab3, введи:
 ```bash
-# Подключение к VPS
-ssh root@your-server-ip
-
-# Обновление системы
-apt update && apt upgrade -y
-
-# Установка Docker
-curl -fsSL https://get.docker.com -o get-docker.sh
-sh get-docker.sh
-
-# Установка Docker Compose
-apt install docker-compose-plugin -y
-
-# Установка Git
-apt install git -y
-
-# Настройка прав
-usermod -aG docker $USER
+cd C:\lab3
 ```
 
-#### 3.2 Клонирование проекта
+Теперь пробуем запуск.
 
+**Вариант 1 (новый синтаксис):**
 ```bash
-mkdir -p /opt/cloud-web-app
-cd /opt/cloud-web-app
-git clone https://github.com/your-username/cloud-web-app.git .
+docker compose up
 ```
 
-### 4. Настройка CI/CD
+Если не сработало (ошибка "unknown command compose"):
 
-#### 4.1 Генерация SSH ключей
-
+**Попробуй старый вариант:**
 ```bash
-# На локальной машине
-ssh-keygen -t ed25519 -C "github-actions" -f github-actions-key
+docker-compose up
 ```
 
-#### 4.2 Настройка VPS для SSH доступа
+Это запустит оба сервиса: web и logger. Docker начнёт скачивать образ busybox, если у тебя его ещё нет.
 
+Ты увидишь много текста, потом должно появиться что-то вроде:
+```
+logger-1  | Logger: service is running
+logger-1  | Logger: service is running
+...
+web-1     | ...
+```
+
+Это значит: оба сервиса работают, логгер пишет сообщения, web поднят.
+
+⚠ На этом этапе окно cmd занято логами. Не закрывай его, пока хочешь, чтобы сервисы работали.
+
+#### ШАГ 5 — Запусти контейнеры в фоновом режиме (удобнее)
+Часто хочется, чтобы терминал был свободен, а сервисы работали в фоне.
+
+Остановим то, что запустили, сочетанием клавиш: `Ctrl + C`
+
+Теперь снова:
 ```bash
-# На VPS
-mkdir -p ~/.ssh
-cat github-actions-key.pub >> ~/.ssh/authorized_keys
-chmod 600 ~/.ssh/authorized_keys
+docker compose up -d
 ```
 
-#### 4.3 Настройка GitHub Secrets
+или, если у тебя старый синтаксис:
+```bash
+docker-compose up -d
+```
 
-В репозитории GitHub: Settings → Secrets and variables → Actions → New repository secret:
+Ключ `-d` означает detached — «отцепиться» от терминала.
 
-- `SSH_HOST` - IP адрес VPS
-- `SSH_USER` - root
-- `SSH_KEY` - содержимое файла `github-actions-key` (приватный ключ)
+Теперь:
+- сервисы работают в фоне
+- командная строка снова доступна
 
-#### 4.4 GitHub Actions Workflow
+#### ШАГ 6 — Проверка работы WEB-сервиса
+Открой браузер и перейди по адресу:
+```
+http://localhost:8080
+```
 
-**.github/workflows/deploy.yml**
+Ты должен увидеть ту же самую страницу, что делал в ЛР2: DevOps Status Page с твоим именем.
+
+Если страница открывается — web-сервис успешно работает через Docker Compose.
+
+#### ШАГ 7 — Проверка логгера
+Теперь надо убедиться, что сервис logger действительно живой и пишет сообщения.
+
+В командной строке:
+```bash
+cd C:\lab3
+docker compose logs logger
+```
+
+(или `docker-compose logs logger` — если у тебя старый синтаксис)
+
+Ты должен увидеть вывод вида:
+```
+logger-1  | Logger: service is running
+logger-1  | Logger: service is running
+logger-1  | Logger: service is running
+...
+```
+
+Это значит, что контейнер logger работает и постоянно пишет лог.
+
+#### ШАГ 8 — Посмотреть список запущенных контейнеров
+Введи:
+```bash
+docker ps
+```
+
+Ты должен увидеть минимум два контейнера:
+- один с именем, содержащим web
+- второй — logger
+
+Примерно так:
+```
+CONTAINER ID   IMAGE           NAMES
+abcd1234       my-status-page  lab3-web-1
+efgh5678       busybox         lab3-logger-1
+```
+
+(имена могут отличаться, но суть такая.)
+
+#### ШАГ 9 — Остановить всю систему одной командой
+Преимущество Docker Compose в том, что всё останавливается одной командой.
+
+В папке C:\lab3:
+```bash
+docker compose down
+```
+
+или:
+```bash
+docker-compose down
+```
+
+Эта команда:
+- останавливает все контейнеры
+- удаляет их (образы остаются)
+
+После этого:
+```bash
+docker ps
+```
+
+должен показывать пустой список (или только какие-то другие, не связанные контейнеры).
+
+---
+
+## ЛАБОРАТОРНАЯ РАБОТА №4 (Windows)
+### Автоматическая проверка работоспособности сервиса (Health-Check)
+
+#### Цель работы
+В этой работе ты напишешь скрипт, который автоматически проверяет доступность твоего веб-сервиса.
+
+Этот скрипт должен:
+- отправить HTTP-запрос на http://localhost:8080
+- определить, доступен сервис или нет
+- вывести результат
+- вернуть правильный код завершения (0 или 1)
+
+Это важнейший навык в DevOps, потому что CI/CD, мониторинг и автоматические перезапуски зависят именно от health-check.
+
+#### Что понадобится
+- Windows 10/11
+- Docker Desktop
+- Запущенный проект из ЛР3
+- Командная строка (cmd)
+- PowerShell
+- Установленный curl for Windows (он встроен в Win10+)
+
+Проверка:
+В командной строке:
+```bash
+curl --version
+```
+
+Если выводит версию — всё готово.
+
+#### ШАГ 1 — Подготовь проект из ЛР3
+Если у тебя проект выключен — запусти:
+```bash
+cd C:\lab3
+docker compose up -d
+```
+
+Проверь, что веб-сервис доступен:
+- Открой браузер → http://localhost:8080
+- Если страница работает — можно писать скрипт
+
+#### ШАГ 2 — Создай файл health-check
+Ты можешь сделать скрипт на:
+- PowerShell
+- cmd
+- или bash (через Git Bash)
+
+Мы делаем на PowerShell, потому что он есть у всех Windows.
+
+1. Нажми Win → напиши notepad → Enter
+2. Вставь:
+```powershell
+# Отправляем запрос на web-сервис
+$response = curl -UseBasicParsing http://localhost:8080
+
+# Если код 200 — значит сервис работает
+if ($response.StatusCode -eq 200) {
+    Write-Output "Сервис доступен"
+    exit 0
+} else {
+    Write-Output "Ошибка: сервис недоступен"
+    exit 1
+}
+```
+
+3. Сохрани файл:
+   - Папка: C:\lab3
+   - Имя: health.ps1
+   - Тип: Все файлы, кодировка UTF-8
+
+#### ШАГ 3 — Разреши выполнение скриптов PowerShell
+Открой PowerShell от имени администратора (Win → "PowerShell" → ПКМ → Запуск от имени администратора)
+
+Выполни:
+```powershell
+Set-ExecutionPolicy RemoteSigned
+```
+
+Нажми Y.
+
+Это нужно, чтобы PowerShell разрешил запуск локальных скриптов.
+
+#### ШАГ 4 — Тест скрипта
+В PowerShell:
+```powershell
+cd C:\lab3
+.\health.ps1
+```
+
+Если сервис включён, ты увидишь:
+```
+Сервис доступен 
+```
+
+Проверка кода завершения:
+```powershell
+echo $LASTEXITCODE
+```
+
+Должен быть:
+```
+0
+```
+
+Теперь попробуй выключить проект:
+```bash
+docker compose down
+```
+
+И снова выполнить:
+```powershell
+.\health.ps1
+```
+
+Теперь:
+```
+Ошибка: сервис недоступен 
+```
+
+И код:
+```
+1
+```
+
+Это то, что нужно для CI/CD.
+
+---
+
+## ЛАБОРАТОРНАЯ РАБОТА №5 (Windows)
+### CI-процесс автоматической проверки проекта (GitHub Actions)
+
+#### Цель лабораторной
+Теперь ты создашь свой первый CI-процесс — автоматическую проверку проекта на GitHub.
+
+Это значит:
+Когда ты отправляешь изменения в GitHub (команда git push) → GitHub сам:
+- скачает твой проект
+- соберёт Docker-контейнеры
+- запустит docker compose
+- выполнит health-check (health.ps1)
+- завершит workflow статусом «успешно» или «ошибка»
+
+Это основа CI/CD — автоматическая проверка качества кода.
+
+#### Что нужно иметь перед началом
+- Git установлен на Windows
+- У тебя есть GitHub-аккаунт
+- Репозиторий создан вручную (или ты создаёшь его сейчас)
+- проект ЛР3 + health-check (ЛР4)
+
+Проверка Git:
+Открой cmd:
+```bash
+git --version
+```
+
+#### ШАГ 1 — Создай GitHub репозиторий
+1. Перейди на https://github.com
+2. В правом верхнем углу нажми кнопку New repository
+3. Укажи:
+   - Repository name: lab3-multicontainer
+   - Visibility: Public
+4. Нажми Create repository
+
+#### ШАГ 2 — Подготовь локальный проект
+В cmd:
+```bash
+cd C:\lab3
+git init
+git add .
+git commit -m "Initial commit for DevOps Lab 5"
+```
+
+Теперь нужно связать локальный проект с GitHub:
+
+В GitHub репозитории есть подсказки. Например:
+```bash
+git remote add origin https://github.com/ТВОЙ_ЛОГИН/lab3-multicontainer.git
+git branch -M main
+git push -u origin main
+```
+
+Выполни эти команды в cmd.
+
+После этого файлы появятся на GitHub.
+
+#### ШАГ 3 — Создай структуру GitHub Actions
+Нам нужно создать папку: `.github/workflows/`
+
+Сделай это:
+```bash
+cd C:\lab3
+mkdir .github
+mkdir .github\workflows
+```
+
+#### ШАГ 4 — Создай CI workflow
+Открой блокнот. Вставь:
 ```yaml
-name: Deploy to VPS
+name: CI Health Check
 
 on:
   push:
-    branches: [ main ]
+    branches: ["main"]
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout code
+    - name: Checkout repository
       uses: actions/checkout@v4
-      
-    - name: Test backend
+
+    - name: Set up Docker
+      uses: docker/setup-buildx-action@v2
+
+    - name: Build containers
+      run: docker compose build
+
+    - name: Start services
+      run: docker compose up -d
+
+    - name: Run health-check
       run: |
-        cd backend
-        npm install
-        npm test
-      
-    - name: Deploy to VPS
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.SSH_HOST }}
-        username: ${{ secrets.SSH_USER }}
-        key: ${{ secrets.SSH_KEY }}
-        script: |
-          cd /opt/cloud-web-app
-          git pull origin main
-          docker compose down --remove-orphans
-          docker compose up -d --build
-          sleep 10
-          
-          # Health checks
-          curl -f http://localhost/api/health || exit 1
-          curl -f http://localhost/api/users || exit 1
+        sleep 5
+        curl -I http://localhost:8080
+
+    - name: Stop containers
+      run: docker compose down
 ```
 
-### 5. Запуск и проверка
+Сохрани как: `C:\lab3\.github\workflows\ci.yml`
 
-#### 5.1 Первоначальный запуск
+❗ Объяснение workflow (для понимания)
+- `on: push:` — запускать при каждом git push
+- `runs-on: ubuntu-latest` — выполнять внутри Ubuntu
+- `docker compose build` — собрать контейнеры
+- `docker compose up -d` — запустить их в фоне
+- `curl -I` — выполнить HTTP-проверку
+- `docker compose down` — остановить систему
 
+#### ШАГ 5 — Загрузить CI на GitHub
 ```bash
-# На VPS
-cd /opt/cloud-web-app
-docker compose up -d --build
-
-# Проверка статуса
-docker compose ps
-
-# Просмотр логов
-docker compose logs -f backend
+cd C:\lab3
+git add .
+git commit -m "Add CI workflow"
+git push
 ```
 
-#### 5.2 Проверка работоспособности
+#### ШАГ 6 — Проверить CI
+Открой GitHub → вкладка Actions
 
-```bash
-# Health check
-curl http://localhost/api/health
+Ты увидишь workflow: `CI Health Check — running…`
 
-# Проверка пользователей
-curl http://localhost/api/users
+После выполнения — статус:
+- Success — всё корректно
+- Failed — нужно исправлять
 
-# Проверка через браузер
-http://your-server-ip/
-http://your-server-ip/api/users
-```
----
-
-### Требования к сдаче
-
-#### GitHub репозиторий должен содержать:
-- Все Dockerfile файлы
-- docker-compose.yml
-- Исходный код frontend/backend
-- SQL скрипты инициализации БД
-- GitHub Actions workflow
-
-#### Скриншоты для демонстрации:
-- Работающий frontend в браузере
-- Успешный CI/CD pipeline в GitHub Actions
-- Вывод `docker compose ps` на VPS
-- Логи инициализации PostgreSQL
-
-#### Рабочий деплой:
-- Приложение доступно по внешнему IP
-- Все эндпоинты отвечают корректно
-- Автоматический деплой работает при push в main
-
-### Возможные проблемы и решения
-
-- **Проблема:** Контейнеры не могут подключиться друг к другу
-- **Решение:** Проверить network в docker-compose.yml и настройки DNS
-
-- **Проблема:** База данных не инициализируется
-- **Решение:** Проверить монтирование init.sql и логи PostgreSQL
-
-- **Проблема:** Nginx возвращает 502 ошибку
-- **Решение:** Проверить, что backend контейнер запущен и слушает порт 3000
-
-- **Проблема:** CI/CD пайплайн падает на health-check
-- **Решение:** Увеличить sleep перед проверкой или добавить retry логику
-
-### Дополнительные улучшения
-
-- Добавить SSL сертификаты через Let's Encrypt.
-- Настроить мониторинг и логирование.
-- Добавить бэкапы базы данных.
-- Реализовать стратегию blue-green деплоя.
-- Настроить кэширование в Nginx.
-
+В логе можно посмотреть, на каком шаге возникла проблема.
 
 ## Срок выполнения
 К 2.12.25 вы должны прислать решение.
@@ -495,4 +875,3 @@ http://your-server-ip/api/users
 Тут вообще все очень страшно на первый взгляд, если что, дадим виртуальный сервер и даже VPN можем, пишите.
 Это задание побольше объемом, сделайте, что успеете.
 По всем вопросам пишите в беседу или в личку.
-
