@@ -127,14 +127,6 @@ async function loadUsers() {
 document.addEventListener('DOMContentLoaded', loadUsers);
 ```
 
-**frontend/Dockerfile**
-```dockerfile
-FROM nginx:alpine
-COPY . /usr/share/nginx/html
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
-```
-
 #### 2.2 Backend
 
 **backend/package.json**
@@ -189,17 +181,6 @@ app.listen(port, '0.0.0.0', () => {
 });
 ```
 
-**backend/Dockerfile**
-```dockerfile
-FROM node:18-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-EXPOSE 3000
-CMD ["npm", "start"]
-```
-
 #### 2.3 База данных
 
 **db/init.sql**
@@ -217,94 +198,6 @@ INSERT INTO users (name, email) VALUES
 ('Мария Сидорова', 'maria@example.com')
 ON CONFLICT (email) DO NOTHING;
 ```
-
-#### 2.4 Nginx
-
-**nginx/nginx.conf**
-```nginx
-events {
-    worker_connections 1024;
-}
-
-http {
-    server {
-        listen 80;
-        server_name _;
-
-        location / {
-            proxy_pass http://frontend:80;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-        }
-
-        location /api/ {
-            proxy_pass http://backend:3000;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-        }
-    }
-}
-```
-
-**nginx/Dockerfile**
-```dockerfile
-FROM nginx:alpine
-COPY nginx.conf /etc/nginx/nginx.conf
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
-```
-
-#### 2.5 Docker Compose
-
-**docker-compose.yml**
-```yaml
-version: '3.8'
-
-services:
-  nginx:
-    build: ./nginx
-    ports:
-      - "80:80"
-    depends_on:
-      - frontend
-      - backend
-    networks:
-      - app-network
-
-  frontend:
-    build: ./frontend
-    networks:
-      - app-network
-
-  backend:
-    build: ./backend
-    environment:
-      - DATABASE_URL=postgresql://user:password@db:5432/appdb
-    depends_on:
-      - db
-    networks:
-      - app-network
-
-  db:
-    image: postgres:15
-    environment:
-      - POSTGRES_DB=appdb
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=password
-    volumes:
-      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - app-network
-
-networks:
-  app-network:
-    driver: bridge
-
-volumes:
-  postgres_data:
-```
-
 ### 3. Настройка VPS
 
 #### 3.1 Подготовка сервера
